@@ -2564,7 +2564,7 @@ class TestLocalRadicale(RepeatedFunctionalTestsBaseClass):
                 i += 1
                 assert i < 100
         try:
-            RepeatedFunctionalTestsBaseClass.setup_method(self)
+            super().setup_method(self)
         except Exception:
             logging.critical("something bad happened in setup", exc_info=True)
             self.teardown_method()
@@ -2575,7 +2575,7 @@ class TestLocalRadicale(RepeatedFunctionalTestsBaseClass):
         self.shutdown_socket.close()
         i = 0
         self.serverdir.__exit__(None, None, None)
-        RepeatedFunctionalTestsBaseClass.teardown_method(self)
+        super().teardown_method(self)
 
 
 class TestLocalXandikos(RepeatedFunctionalTestsBaseClass):
@@ -2629,7 +2629,7 @@ class TestLocalXandikos(RepeatedFunctionalTestsBaseClass):
             self.server_params["url"] + "sometestuser"
         )
         self.server_params["incompatibilities"] = compatibility_issues.xandikos
-        RepeatedFunctionalTestsBaseClass.setup_method(self)
+        super().setup_method(self)
 
     def teardown_method(self):
         if not test_xandikos:
@@ -2657,4 +2657,4 @@ class TestLocalXandikos(RepeatedFunctionalTestsBaseClass):
             assert i < 100
 
         self.serverdir.__exit__(None, None, None)
-        RepeatedFunctionalTestsBaseClass.teardown_method(self)
+        super().teardown_method(self)
