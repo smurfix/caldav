@@ -47,10 +47,10 @@ try:
 except ImportError:
     try:
         import xandikos
-
-        test_xandikos = True
-    except:
+    except ImportError:
         test_xandikos = False
+    else:
+        test_xandikos = True
 
 try:
     from .conf_private import radicale_host, radicale_port
@@ -63,10 +63,10 @@ try:
 except ImportError:
     try:
         import radicale
-
-        test_radicale = True
-    except:
+    except ImportError:
         test_radicale = False
+    else:
+        test_radicale = True
 
 try:
     from .conf_private import rfc6638_users

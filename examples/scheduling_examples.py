@@ -18,7 +18,7 @@ from caldav import error
 ###
 try:
     from tests.conf_private import rfc6638_users
-except:
+except ImportError:
     rfc6638_users = None
 
 

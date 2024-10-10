@@ -44,10 +44,10 @@ from caldav.lib.python_utilities import to_wire
 
 try:
     from typing import ClassVar, Optional, Union
-
-    TimeStamp = Optional[Union[date, datetime]]
-except:
+except ImportError:
     pass
+else:
+    TimeStamp = Optional[Union[date, datetime]]
 
 import logging
 
@@ -428,7 +428,7 @@ class DAVObject:
             return (
                 str(self.get_property(dav.DisplayName(), use_cached=True)) or self.url
             )
-        except:
+        except Exception:
             return str(self.url)
 
     def __repr__(self) -> str:
@@ -453,7 +453,7 @@ class CalendarSet(DAVObject):
         for c_url, c_type, c_name in data:
             try:
                 cal_id = c_url.split("/")[-2]
-            except:
+            except IndexError:
                 log.error(f"Calendar {c_name} has unexpected url {c_url}")
                 cal_id = None
             cals.append(
@@ -791,13 +791,13 @@ class Calendar(DAVObject):
         if name:
             try:
                 self.set_properties([display_name])
-            except:
+            except SyntaxError:  # XXX replace with specific exception
                 ## TODO: investigate.  Those asserts break.
                 error.assert_(False)
                 try:
                     current_display_name = self.get_display_name()
                     error.assert_(current_display_name == name)
-                except:
+                except Exception:
                     log.warning(
                         "calendar server does not support display name on calendar?  Ignoring",
                         exc_info=True,
@@ -1298,7 +1298,7 @@ class Calendar(DAVObject):
         for obj in objects:
             try:
                 obj.load(only_if_unloaded=True)
-            except:
+            except SyntaxError:  # XXX replace with specific exception
                 pass
 
         return objects
@@ -1693,7 +1693,7 @@ class Calendar(DAVObject):
         ## TODO: look more into this, I think sync_token should be directly available through response object
         try:
             sync_token = response.sync_token
-        except:
+        except AttributeError:
             sync_token = response.tree.findall(".//" + dav.SyncToken.tag)[0].text
 
         ## this is not quite right - the etag we've fetched can already be outdated
@@ -1766,7 +1766,7 @@ class ScheduleMailbox(Calendar):
                 # we ignore the type here as this is defined in sub-classes only; require more changes to
                 # properly fix in a future revision
                 self.url = self.client.url.join(URL(self.get_property(self.findprop())))  # type: ignore
-            except:
+            except SyntaxError:  # XXX replace with specific exception
                 logging.error("something bad happened", exc_info=True)
                 error.assert_(self.client.check_scheduling_support())
                 self.url = None
@@ -1785,7 +1785,7 @@ class ScheduleMailbox(Calendar):
         if not self._items:
             try:
                 self._items = self.objects(load_objects=True)
-            except:
+            except SyntaxError:  # XXX replace with specific exception
                 logging.debug(
                     "caldav server does not seem to support a sync-token REPORT query on a scheduling mailbox"
                 )
@@ -1799,7 +1799,7 @@ class ScheduleMailbox(Calendar):
         else:
             try:
                 self._items.sync()
-            except:
+            except SyntaxError:  # XXX replace with specific exception
                 self._items = [
                     CalendarObjectResource(url=x[0], client=self.client)
                     for x in self.children()
@@ -2606,7 +2606,7 @@ class CalendarObjectResource(DAVObject):
                 self._set_vobject_instance(
                     vobject.readOne(to_unicode(self._get_data()))  # type: ignore
                 )
-            except:
+            except SyntaxError:  # XXX replace with specific exception
                 log.critical(
                     "Something went wrong while loading icalendar data into the vobject class.  ical url: "
                     + str(self.url)

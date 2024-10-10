@@ -13,7 +13,7 @@ try:
     debug_dump_communication = os.environ.get("PYTHON_CALDAV_COMMDUMP", False)
     ## one of DEBUG_PDB, DEBUG, DEVELOPMENT, PRODUCTION
     debugmode = os.environ["PYTHON_CALDAV_DEBUGMODE"]
-except:
+except KeyError:
     if "dev" in __version__:
         debugmode = "DEVELOPMENT"
     else:

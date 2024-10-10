@@ -552,7 +552,7 @@ class RepeatedFunctionalTestsBaseClass(object):
                     obj.delete()
                 except error.NotFoundError:
                     pass
-                except:
+                except Exception:
                     logging.error(
                         "Something went kaboom while deleting event", exc_info=True
                     )
@@ -576,10 +576,10 @@ class RepeatedFunctionalTestsBaseClass(object):
                 try:
                     for goo in cal.objects():
                         goo.delete()
-                except:
+                except Exception:
                     pass
             cal.delete()
-        except:
+        except Exception:
             pass
 
     def _fixCalendar(self, **kwargs):
@@ -728,7 +728,7 @@ class RepeatedFunctionalTestsBaseClass(object):
             proxy_httpd = NonThreadingHTTPServer(
                 server_address, ProxyHandler, logging.getLogger("TinyHTTPProxy")
             )
-        except:
+        except Exception:
             pytest.skip("Unable to set up proxy server")
 
         threadobj = threading.Thread(target=proxy_httpd.serve_forever)
@@ -2559,13 +2559,13 @@ class TestLocalRadicale(RepeatedFunctionalTestsBaseClass):
             try:
                 requests.get(self.server_params["url"])
                 break
-            except:
+            except Exception:
                 time.sleep(0.05)
                 i += 1
                 assert i < 100
         try:
             RepeatedFunctionalTestsBaseClass.setup_method(self)
-        except:
+        except Exception:
             logging.critical("something bad happened in setup", exc_info=True)
             self.teardown_method()
 
@@ -2640,7 +2640,7 @@ class TestLocalXandikos(RepeatedFunctionalTestsBaseClass):
         def silly_request():
             try:
                 requests.get(self.server_params["url"])
-            except:
+            except Exception:
                 pass
 
         threading.Thread(target=silly_request).start()

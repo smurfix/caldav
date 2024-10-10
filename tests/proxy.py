@@ -71,7 +71,7 @@ class ProxyHandler(BaseHTTPRequestHandler):
         except socket.error as arg:
             try:
                 msg = arg[1]
-            except:
+            except IndexError:
                 msg = arg
             self.send_error(404, msg)
             return 0

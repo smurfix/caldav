@@ -976,11 +976,7 @@ END:VCALENDAR
         #    assert type(e) == lxml.etree.XMLSyntaxError
 
         davclient.huge_tree = True
-        try:
-            DAVResponse(resp, davclient=davclient)
-            assert True
-        except:
-            assert False
+        DAVResponse(resp, davclient=davclient)
 
     def testFailedQuery(self):
         """
@@ -1254,13 +1250,8 @@ END:VCALENDAR
         # print(filter)
 
         crash = cdav.CompFilter()
-        value = None
-        try:
+        with pytest.raises(ValueError):
             value = str(crash)
-        except:
-            pass
-        if value is not None:
-            raise Exception("This should have crashed")
 
     def test_calendar_comp_class_by_data(self):
         calendar = Calendar()

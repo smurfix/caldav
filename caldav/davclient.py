@@ -80,7 +80,7 @@ class DAVResponse:
         ) or self.headers.get("Content-Type", "").startswith("application/xml"):
             try:
                 content_length = int(self.headers["Content-Length"])
-            except:
+            except KeyError:
                 content_length = -1
             if content_length == 0 or not self._raw:
                 self._raw = ""
@@ -98,7 +98,7 @@ class DAVResponse:
                             remove_blank_text=True, huge_tree=self.huge_tree
                         ),
                     )
-                except:
+                except Exception:
                     logging.critical(
                         "Expected some valid XML from the server, but got this: \n"
                         + str(self._raw),
@@ -128,7 +128,7 @@ class DAVResponse:
                         remove_blank_text=True, huge_tree=self.huge_tree
                     ),
                 )
-            except:
+            except SyntaxError:  # XXX replace with specific exception
                 pass
 
         ## this if will always be true as for now, see other comments on streaming.
@@ -491,7 +491,7 @@ class DAVClient:
             ## element that should come with caldav extras.
             ## Anyway, packing this into a try-except in case it fails.
             response = self.options(self.principal().url)
-        except:
+        except SyntaxError:  # XXX replace with specific exception
             response = self.options(str(self.url))
         return response.headers.get("DAV", None)
 
@@ -665,7 +665,7 @@ class DAVClient:
             )
             log.debug("server responded with %i %s" % (r.status_code, r.reason))
             response = DAVResponse(r, self)
-        except:
+        except Exception:
             ## this is a workaround needed due to some weird server
             ## that would just abort the connection rather than send a
             ## 401 when an unauthenticated request with a body was

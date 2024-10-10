@@ -104,12 +104,12 @@ def fix(event):
 
         try:
             import difflib
-
+        except ImportError:
+            diff = ["Original: ", event, "Modified: ", fixed2]
+        else:
             diff = list(
                 difflib.unified_diff(event.split("\n"), fixed2.split("\n"), lineterm="")
             )
-        except:
-            diff = ["Original: ", event, "Modified: ", fixed2]
 
         log("\n".join(log_message + diff))
 
