@@ -1,16 +1,15 @@
-from requests.auth import AuthBase
+from httpx import Auth
 
 
-class HTTPBearerAuth(AuthBase):
-    def __init__(self, password: str) -> None:
-        self.password = password
+class BearerAuth(Auth):
+    """
+    Allows the 'auth' argument to be passed as a (username, password) pair,
+    and uses HTTP Basic authentication.
+    """
 
-    def __eq__(self, other: object) -> bool:
-        return self.password == getattr(other, "password", None)
+    def __init__(self, token: str | bytes) -> None:
+        self._auth_header = f"Bearer {token}"
 
-    def __ne__(self, other: object) -> bool:
-        return not self == other
-
-    def __call__(self, r):
-        r.headers["Authorization"] = f"Bearer {self.password}"
-        return r
+    def auth_flow(self, request: Request) -> typing.Generator[Request, Response, None]:
+        request.headers["Authorization"] = self._auth_header
+        yield request

@@ -12,12 +12,8 @@ from typing import TYPE_CHECKING
 from typing import Union
 from urllib.parse import unquote
 
-import requests
 from lxml import etree
 from lxml.etree import _Element
-from requests.auth import AuthBase
-from requests.models import Response
-from requests.structures import CaseInsensitiveDict
 
 from .elements.base import BaseElement
 from caldav.elements import dav
@@ -28,7 +24,7 @@ from caldav.lib.url import URL
 from caldav.objects import Calendar
 from caldav.objects import log
 from caldav.objects import Principal
-from caldav.requests import HTTPBearerAuth
+from caldav.requests import BearerAuth
 
 if TYPE_CHECKING:
     pass
@@ -55,13 +51,13 @@ class DAVResponse:
     raw = ""
     reason: str = ""
     tree: Optional[_Element] = None
-    headers: CaseInsensitiveDict = None
+    headers: httpx.Headers = None
     status: int = 0
     davclient = None
     huge_tree: bool = False
 
     def __init__(
-        self, response: Response, davclient: Optional["DAVClient"] = None
+        self, response: httpx.Response, davclient: Optional["DAVClient"] = None
     ) -> None:
         self.headers = response.headers
         log.debug("response headers: " + str(self.headers))
@@ -350,7 +346,7 @@ class DAVResponse:
 
 class DAVClient:
     """
-    Basic client for webdav, uses the requests lib; gives access to
+    Basic client for webdav, uses the httpx lib; gives access to
     low-level operations towards the caldav server.
 
     Unless you have special needs, you should probably care most about
@@ -367,7 +363,7 @@ class DAVClient:
         proxy: Optional[str] = None,
         username: Optional[str] = None,
         password: Optional[str] = None,
-        auth: Optional[AuthBase] = None,
+        auth: Optional[httpx.Auth] = None,
         timeout: Optional[int] = None,
         ssl_verify_cert: Union[bool, str] = True,
         ssl_cert: Union[str, Tuple[str, str], None] = None,
@@ -380,18 +376,14 @@ class DAVClient:
          * url: A fully qualified url: `scheme://user:pass@hostname:port`
          * proxy: A string defining a proxy server: `hostname:port`
          * username and password should be passed as arguments or in the URL
-         * auth, timeout and ssl_verify_cert are passed to requests.request.
+         * auth, timeout and ssl_verify_cert are passed to httpx.request.
          * ssl_verify_cert can be the path of a CA-bundle or False.
          * huge_tree: boolean, enable XMLParser huge_tree to handle big events, beware
            of security issues, see : https://lxml.de/api/lxml.etree.XMLParser-class.html
-
-        The requests library will honor a .netrc-file, if such a file exists
-        username and password may be omitted.  Known bug: .netrc is honored
-        even if a username/password is given, ref https://github.com/python-caldav/caldav/issues/206
         """
         headers = headers or {}
 
-        self.session = requests.Session()
+        self.session = httpx.AsyncClient()
 
         log.debug("url: " + str(url))
         self.url = URL.objectify(url)
@@ -399,7 +391,7 @@ class DAVClient:
         # Prepare proxy info
         if proxy is not None:
             _proxy = proxy
-            # requests library expects the proxy url to have a scheme
+            # httpx library expects the proxy url to have a scheme
             if "://" not in proxy:
                 _proxy = self.url.scheme + "://" + proxy
 
@@ -693,11 +685,11 @@ class DAVClient:
             auth_types = self.extract_auth_types(r.headers["WWW-Authenticate"])
 
             if self.password and self.username and "digest" in auth_types:
-                self.auth = requests.auth.HTTPDigestAuth(self.username, self.password)
+                self.auth = httpx.DigestAuth(self.username, self.password)
             elif self.password and self.username and "basic" in auth_types:
-                self.auth = requests.auth.HTTPBasicAuth(self.username, self.password)
+                self.auth = httpx.BasicAuth(self.username, self.password)
             elif self.password and "bearer" in auth_types:
-                self.auth = HTTPBearerAuth(self.password)
+                self.auth = BearerAuth(self.password)
             else:
                 raise NotImplementedError(
                     "The server does not provide any of the currently "
@@ -725,25 +717,22 @@ class DAVClient:
             auth_types = self.extract_auth_types(r.headers["WWW-Authenticate"])
 
             if self.password and self.username and "digest" in auth_types:
-                self.auth = requests.auth.HTTPDigestAuth(
+                self.auth = httpx.DigestAuth(
                     self.username, self.password.decode()
                 )
             elif self.password and self.username and "basic" in auth_types:
-                self.auth = requests.auth.HTTPBasicAuth(
+                self.auth = httpx.BasicAuth(
                     self.username, self.password.decode()
                 )
             elif self.password and "bearer" in auth_types:
-                self.auth = HTTPBearerAuth(self.password.decode())
+                self.auth = BearerAuth(self.password.decode())
 
             self.username = None
             self.password = None
             return self.request(str(url_obj), method, body, headers)
 
         # this is an error condition that should be raised to the application
-        if (
-            response.status == requests.codes.forbidden
-            or response.status == requests.codes.unauthorized
-        ):
+        if r.status_code in (401,403):
             try:
                 reason = response.reason
             except AttributeError:

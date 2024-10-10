@@ -27,10 +27,12 @@ classifiers = [
 ]
 urls = { Homepage = "https://github.com/python-caldav/caldav" }
 dependencies = [
+    "anyio",
     "vobject",
     "lxml",
-    "requests",
+    "httpx",
     "icalendar",
+    "urllib3",
     "recurring-ical-events>=2.0.0",
     "typing_extensions;python_version<'3.11'",
 ]
@@ -39,6 +41,7 @@ dynamic = ["version"]
 [project.optional-dependencies]
 test = [
     "pytest",
+    "requests",
     "coverage",
     "sphinx",
     "backports.zoneinfo;python_version<'3.9'",
