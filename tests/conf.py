@@ -5,7 +5,7 @@
 ## Check conf_private.py.EXAMPLE
 import logging
 
-from caldav.davclient import DAVClient
+from aiocaldav.davclient import DAVClient
 
 # from .compatibility_issues import bedework, xandikos
 

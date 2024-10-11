@@ -32,8 +32,8 @@ from urllib import parse
 from urllib.parse import urlparse
 from urllib.parse import urlunparse
 
-from caldav.lib.python_utilities import to_local
-from caldav.lib.python_utilities import to_wire
+from aiocaldav.lib.python_utilities import to_local
+from aiocaldav.lib.python_utilities import to_wire
 
 __version__ = "0.3.1"
 

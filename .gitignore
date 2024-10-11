@@ -22,9 +22,9 @@ tests/.noseids
 *.bak
 *~
 #*#
-caldav.egg-info/
+aiocaldav.egg-info/
 tests/conf_private.py
 .tox
 .eggs
 .venv
-caldav/_version.py
+aiocaldav/_version.py

@@ -4,7 +4,7 @@ from collections import defaultdict
 from typing import Dict
 from typing import Optional
 
-from caldav import __version__
+from aiocaldav import __version__
 
 debug_dump_communication = False
 try:

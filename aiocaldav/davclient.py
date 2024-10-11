@@ -11,20 +11,21 @@ from typing import Tuple
 from typing import TYPE_CHECKING
 from typing import Union
 from urllib.parse import unquote
+import httpx
 
 from lxml import etree
 from lxml.etree import _Element
 
 from .elements.base import BaseElement
-from caldav.elements import dav
-from caldav.lib import error
-from caldav.lib.python_utilities import to_normal_str
-from caldav.lib.python_utilities import to_wire
-from caldav.lib.url import URL
-from caldav.objects import Calendar
-from caldav.objects import log
-from caldav.objects import Principal
-from caldav.requests import BearerAuth
+from aiocaldav.elements import dav
+from aiocaldav.lib import error
+from aiocaldav.lib.python_utilities import to_normal_str
+from aiocaldav.lib.python_utilities import to_wire
+from aiocaldav.lib.url import URL
+from aiocaldav.objects import Calendar
+from aiocaldav.objects import log
+from aiocaldav.objects import Principal
+from aiocaldav.requests import BearerAuth
 
 if TYPE_CHECKING:
     pass
@@ -140,7 +141,7 @@ class DAVResponse:
         ## incidents with a response without a reason has been
         ## observed
         try:
-            self.reason = response.reason
+            self.reason = response.reason_phrase
         except AttributeError:
             self.reason = ""
 
@@ -432,34 +433,34 @@ class DAVClient:
 
         self._principal = None
 
-    def __enter__(self) -> Self:
+    async def __aenter__(self) -> Self:
         return self
 
-    def __exit__(
+    async def __aexit__(
         self,
         exc_type: Optional[BaseException],
         exc_value: Optional[BaseException],
         traceback: Optional[TracebackType],
     ) -> None:
-        self.close()
+        await self.aclose()
 
-    def close(self) -> None:
+    async def aclose(self) -> None:
         """
         Closes the DAVClient's session object
         """
-        self.session.close()
+        await self.session.aclose()
 
-    def principal(self, *largs, **kwargs):
+    async def principal(self, *largs, **kwargs):
         """
         Convenience method, it gives a bit more object-oriented feel to
         write client.principal() than Principal(client).
 
-        This method returns a :class:`caldav.Principal` object, with
-        higher-level methods for dealing with the principals
+        This method returns a cached :class:`caldav.Principal` object, with
+        higher-level methods for dealing with the principal's
         calendars.
         """
         if not self._principal:
-            self._principal = Principal(client=self, *largs, **kwargs)
+            self._principal = await Principal(client=self, *largs, **kwargs)
         return self._principal
 
     def calendar(self, **kwargs):
@@ -470,29 +471,29 @@ class DAVClient:
         No network traffic will be initiated by this method.
 
         If you don't know the URL of the calendar, use
-        client.principal().calendar(...) instead, or
-        client.principal().calendars()
+        await (await client.principal()).calendar(...) instead, or
+        await (await client.principal()).calendars()
         """
         return Calendar(client=self, **kwargs)
 
-    def check_dav_support(self) -> Optional[str]:
+    async def check_dav_support(self) -> Optional[str]:
         try:
             ## SOGo does not return the full capability list on the caldav
             ## root URL, and that's OK according to the RFC ... so apparently
             ## we need to do an extra step here to fetch the URL of some
             ## element that should come with caldav extras.
             ## Anyway, packing this into a try-except in case it fails.
-            response = self.options(self.principal().url)
+            response = await self.options((await self.principal()).url)
         except SyntaxError:  # XXX replace with specific exception
-            response = self.options(str(self.url))
+            response = await self.options(str(self.url))
         return response.headers.get("DAV", None)
 
-    def check_cdav_support(self) -> bool:
-        support_list = self.check_dav_support()
+    async def check_cdav_support(self) -> bool:
+        support_list = await self.check_dav_support()
         return support_list is not None and "calendar-access" in support_list
 
-    def check_scheduling_support(self) -> bool:
-        support_list = self.check_dav_support()
+    async def check_scheduling_support(self) -> bool:
+        support_list = await self.check_dav_support()
         return support_list is not None and "calendar-auto-schedule" in support_list
 
     def propfind(
@@ -612,7 +613,7 @@ class DAVClient:
         # https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/WWW-Authenticate#syntax
         return {h.split()[0] for h in header.lower().split(",")}
 
-    def request(
+    async def request(
         self,
         url: str,
         method: str = "GET",
@@ -644,34 +645,36 @@ class DAVClient:
         )
 
         try:
-            r = self.session.request(
+            # XXX do the SSL thing correctly
+            r = await self.session.request(
                 method,
                 str(url_obj),
-                data=to_wire(body),
+                content=to_wire(body),
                 headers=combined_headers,
-                proxies=proxies,
+                # proxies=proxies,
                 auth=self.auth,
                 timeout=self.timeout,
-                verify=self.ssl_verify_cert,
-                cert=self.ssl_cert,
+                # verify=self.ssl_verify_cert,
+                # cert=self.ssl_cert,
             )
-            log.debug("server responded with %i %s" % (r.status_code, r.reason))
+            log.debug("server responded with %i %s" % (r.status_code, r.reason_phrase))
             response = DAVResponse(r, self)
-        except Exception:
+        except SyntaxError:  # XXX use the correct exception!
             ## this is a workaround needed due to some weird server
             ## that would just abort the connection rather than send a
             ## 401 when an unauthenticated request with a body was
             ## sent to the server - ref https://github.com/python-caldav/caldav/issues/158
             if self.auth or not self.password:
                 raise
-            r = self.session.request(
+            # XXX do the SSL thing correctly
+            r = await self.session.request(
                 method="GET",
                 url=str(url_obj),
                 headers=combined_headers,
-                proxies=proxies,
+                # proxies=proxies,
                 timeout=self.timeout,
-                verify=self.ssl_verify_cert,
-                cert=self.ssl_cert,
+                # verify=self.ssl_verify_cert,
+                # cert=self.ssl_cert,
             )
             if not r.status_code == 401:
                 raise
@@ -696,7 +699,7 @@ class DAVClient:
                     "supported authentication methods: basic, digest, bearer"
                 )
 
-            return self.request(url, method, body, headers)
+            return await self.request(url, method, body, headers)
 
         elif (
             r.status_code == 401
@@ -729,12 +732,12 @@ class DAVClient:
 
             self.username = None
             self.password = None
-            return self.request(str(url_obj), method, body, headers)
+            return await self.request(str(url_obj), method, body, headers)
 
         # this is an error condition that should be raised to the application
         if r.status_code in (401,403):
             try:
-                reason = response.reason
+                reason = response.reason_phrase
             except AttributeError:
                 reason = "None given"
             raise error.AuthorizationError(url=str(url_obj), reason=reason)
@@ -754,7 +757,7 @@ class DAVClient:
                 commlog.write(b"\n\n")
                 commlog.write(to_wire(body))
                 commlog.write(b"<====\n")
-                commlog.write(f"{response.status} {response.reason}".encode("utf-8"))
+                commlog.write(f"{response.status} {response.reason_phrase}".encode("utf-8"))
                 commlog.write(
                     b"\n".join(
                         to_wire(f"{x}: {response.headers[x]}") for x in response.headers

@@ -8,7 +8,7 @@ from typing import Optional
 from .base import BaseElement
 from .base import NamedBaseElement
 from .base import ValuedBaseElement
-from caldav.lib.namespace import ns
+from aiocaldav.lib.namespace import ns
 
 utc_tz = timezone.utc
 
@@ -23,7 +23,7 @@ def _to_utc_date_string(ts):
             ## in python 3.6 and higher, ts.astimezone() will assume a
             ## naive timestamp is localtime (and so do we)
             ts = ts.astimezone(utc_tz)
-        except SyntaxError:  # XXX replace with specific exception
+        except ValueError:
             ## native time stamp and the current python version is
             ## not able to treat it as localtime.
             import tzlocal

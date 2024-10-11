@@ -12,8 +12,8 @@ from urllib.parse import unquote
 from urllib.parse import urlparse
 from urllib.parse import urlunparse
 
-from caldav.lib.python_utilities import to_normal_str
-from caldav.lib.python_utilities import to_unicode
+from aiocaldav.lib.python_utilities import to_normal_str
+from aiocaldav.lib.python_utilities import to_unicode
 
 if sys.version_info < (3, 11):
     from typing_extensions import Self

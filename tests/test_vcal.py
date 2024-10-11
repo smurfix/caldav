@@ -10,11 +10,11 @@ import icalendar
 import pytest
 import vobject
 
-from caldav.lib import vcal
-from caldav.lib.python_utilities import to_normal_str
-from caldav.lib.python_utilities import to_wire
-from caldav.lib.vcal import create_ical
-from caldav.lib.vcal import fix
+from aiocaldav.lib import vcal
+from aiocaldav.lib.python_utilities import to_normal_str
+from aiocaldav.lib.python_utilities import to_wire
+from aiocaldav.lib.vcal import create_ical
+from aiocaldav.lib.vcal import fix
 
 utc = timezone.utc
 

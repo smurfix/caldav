@@ -141,7 +141,7 @@ Setting up a caldav client object and a principal object:
 .. code-block:: python
 
   with caldav.DAVClient(url=url, username=username, password=password) as client:
-      my_principal = client.principal()
+      my_principal = await client.principal()
       ...
 
 Note that if a .netrc file exists, it will be honored and the username
@@ -153,13 +153,13 @@ Fetching calendars:
 
 .. code-block:: python
 
-  calendars = my_principal.calendars()
+  calendars = await my_principal.calendars()
 
 Creating a calendar:
 
 .. code-block:: python
 
-  my_new_calendar = my_principal.make_calendar(name="Test calendar")
+  my_new_calendar = await my_principal.make_calendar(name="Test calendar")
 
 Adding an event to the calendar, v0.9 adds this interface:
 
@@ -193,13 +193,15 @@ Do a date search in a calendar:
 
 .. code-block:: python
 
-  events_fetched = my_new_calendar.search(
+  events_fetched = await my_new_calendar.search(
       start=datetime(2021, 1, 1), end=datetime(2024, 1, 1),event=True, expand=True)
 
 To modify an event:
 
+.. code-block:: python
+
     event.vobject_instance.vevent.summary.value = 'Norwegian national day celebrations'
-    event.save()
+    await event.save()
 
 .. code-block:: python
 
@@ -211,32 +213,32 @@ Find a calendar with a known URL without going through the Principal-object:
 
 .. code-block:: python
 
-  the_same_calendar = client.calendar(url=my_new_calendar.url)
+  the_same_calendar = await client.calendar(url=my_new_calendar.url)
 
 Get all events from a calendar:
 
 .. code-block:: python
 
-  all_events = the_same_calendar.events()
+  all_events = await the_same_calendar.events()
 
 Deleting a calendar (or, basically, any object):
 
 .. code-block:: python
 
-  my_new_calendar.delete()
+  await my_new_calendar.delete()
 
 Create a task list:
 
 .. code-block:: python
 
-  my_new_tasklist = my_principal.make_calendar(
+  my_new_tasklist = await my_principal.make_calendar(
               name="Test tasklist", supported_calendar_component_set=['VTODO'])
 
 Adding a task to a task list.  The ics parameter may be some complete ical text string or a fragment.
 
 .. code-block:: python
 
-  my_new_tasklist.save_todo(
+  await my_new_tasklist.save_todo(
       ics = "RRULE:FREQ=YEARLY",
       summary="Deliver some data to the Tax authorities",
       dtstart=date(2020, 4, 1),
@@ -248,13 +250,13 @@ Fetching tasks:
 
 .. code-block:: python
 
-  todos = my_new_tasklist.todos()
+  todos = await my_new_tasklist.todos()
 
 Date_search also works on task lists, but one has to be explicit to get the tasks:
 
 .. code-block:: python
 
-  todos = my_new_calendar.search(
+  todos = await my_new_calendar.search(
       start=datetime(2021, 1, 1), end=datetime(2024, 1, 1),
       compfilter='VTODO',event=True, expand=True)
 

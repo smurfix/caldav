@@ -1,3 +1,30 @@
+# Async Changelog
+
+## [1.3.90] - unreleased
+
+This is a mostly-straight anyio-ization of caldav's developent branch as of
+2024-10-10, commit fbd019711.
+
+### Changes
+
+* A lot of methods have been async-ized.
+  To use, `import aiocaldav as caldav` and sprinkle `await` keywords to wherever
+  something returns a coroutine.
+* `requests` has been replaced with `httpx`.
+
+### Fixed
+
+* Generic `except:` handlers have been excised.
+
+### Untested
+
+* The author only has a Radicale server on hand. Support for servers
+  without its quirks, and/or with different ones, is untested.
+
+* While the code is based on anyio and should run under asyncio as well as
+  trio, the test suite only works on asyncio because of an anyio bug
+  https://github.com/agronholm/anyio/issues/633 (which also exists in trio).
+
 # Changelog
 
 All notable changes to this project starting from v1.2 will be documented in this file.

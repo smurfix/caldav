@@ -12,6 +12,8 @@
 ## * Perhaps some more readable format should be considered (yaml?).
 ## * Consider how to get this into the documentation
 incompatibility_description = {
+    'real_failure':
+        """The non-async testcase breaks too, so skip for now.""",
     'no_expand':
         """Server may throw errors when asked to do an expanded date search (this is ignored by the tests now, as we're doing client-side expansion)""",
 

@@ -1,7 +1,7 @@
 # encoding: utf-8
 import datetime
 
-import caldav
+import aiocaldav as caldav
 
 
 class TestRadicale(object):
@@ -15,18 +15,19 @@ class TestRadicale(object):
         (datetime.datetime(2011, 3, 4, 20, 0), datetime.datetime(2011, 1, 15, 20, 0))
     )
 
+    @pytest.fixture(autouse=True, scope="function")
     def setup(self):
         URL = "http://localhost:8080/nicoe/perso/"
         self.client = caldav.DAVClient(URL)
         self.calendar = caldav.objects.Calendar(self.client, URL)
 
-    def test_eventslist(self):
-        events = self.calendar.events()
+    async def test_eventslist(self):
+        events = await self.calendar.events()
         assert len(events) == 2
 
         summaries, dtstart = set(), set()
         for event in events:
-            event.load()
+            await event.load()
             vobj = event.instance
             summaries.add(vobj.vevent.summary.value)
             dtstart.add(vobj.vevent.dtstart.value)
@@ -36,11 +37,12 @@ class TestRadicale(object):
 
 
 class TestTryton(object):
+    @pytest.fixture(autouse=True, scope="function")
     def setup(self):
         URL = "http://admin:admin@localhost:9080/caldav/Calendars/Test"
         self.client = caldav.DAVClient(URL)
         self.calendar = caldav.objects.Calendar(self.client, URL)
 
-    def test_eventslist(self):
-        events = self.calendar.events()
+    async def test_eventslist(self):
+        events = await self.calendar.events()
         assert len(events) == 1

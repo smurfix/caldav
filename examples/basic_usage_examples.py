@@ -3,11 +3,13 @@ from datetime import date
 from datetime import datetime
 from datetime import timedelta
 
+import anyio
+
 ## We'll try to use the local caldav library, not the system-installed
 sys.path.insert(0, "..")
 sys.path.insert(0, ".")
 
-import caldav
+import aiocaldav as caldav
 
 ## DO NOT name your file calendar.py or caldav.py!  We've had several
 ## issues filed, things break because the wrong files are imported.
@@ -15,13 +17,13 @@ import caldav
 
 ## CONFIGURATION.  Edit here, or set up something in
 ## tests/conf_private.py (see tests/conf_private.py.EXAMPLE).
-caldav_url = "https://calendar.example.com/dav"
-username = "somebody"
-password = "hunter2"
-headers = {"X-MY-CUSTOMER-HEADER": "123"}
+caldav_url = "http://dav.os.smurf.noris.de:51032/"
+username = "smurf"
+password = "niex wie wieg"
+headers = {}
 
 
-def run_examples():
+async def run_examples():
     """
     Run through all the examples, one by one
     """
@@ -30,7 +32,7 @@ def run_examples():
     ## As of 1.0, Initiating the client object will not cause any server communication,
     ## so the credentials aren't validated.
     ## The client object can be used as a context manager, like this:
-    with caldav.DAVClient(
+    async with caldav.DAVClient(
         url=caldav_url,
         username=username,
         password=password,
@@ -38,46 +40,46 @@ def run_examples():
     ) as client:
         ## Typically the next step is to fetch a principal object.
         ## This will cause communication with the server.
-        my_principal = client.principal()
+        my_principal = await client.principal()
 
         ## The principals calendars can be fetched like this:
-        calendars = my_principal.calendars()
+        calendars = await my_principal.calendars()
 
         ## print out some information
         print_calendars_demo(calendars)
 
         ## This cleans up from previous runs, if needed:
-        find_delete_calendar_demo(my_principal, "Test calendar from caldav examples")
+        await find_delete_calendar_demo(my_principal, "Test calendar from caldav examples")
 
         ## Let's create a new calendar to play with.
         ## This may raise an error for multiple reasons:
         ## * server may not support it (it's not mandatory in the CalDAV RFC)
         ## * principal may not have the permission to create calendars
         ## * some cloud providers have a global namespace
-        my_new_calendar = my_principal.make_calendar(
+        my_new_calendar = await my_principal.make_calendar(
             name="Test calendar from caldav examples"
         )
 
         ## Let's add some events to our newly created calendar
-        add_stuff_to_calendar_demo(my_new_calendar)
+        await add_stuff_to_calendar_demo(my_new_calendar)
 
         ## Let's find the stuff we just added to the calendar
-        event = search_calendar_demo(my_new_calendar)
+        event = await search_calendar_demo(my_new_calendar)
 
         ## Inspecting and modifying an event
-        read_modify_event_demo(event)
+        await read_modify_event_demo(event)
 
         ## Accessing a calendar by a calendar URL
-        calendar_by_url_demo(client, my_new_calendar.url)
+        await calendar_by_url_demo(client, my_new_calendar.url)
 
         ## Clean up - delete things
         ## (The event would normally be deleted together with the calendar,
         ## but different calendar servers may behave differently ...)
-        event.delete()
-        my_new_calendar.delete()
+        await event.delete()
+        await my_new_calendar.delete()
 
 
-def calendar_by_url_demo(client, url):
+async def calendar_by_url_demo(client, url):
     """Sometimes one may have a calendar URL.  Sometimes maybe one would
     not want to fetch the principal object from the server (it's not
     even required to support it by the caldav protocol).
@@ -85,7 +87,7 @@ def calendar_by_url_demo(client, url):
     ## No network traffic will be initiated by this:
     calendar = client.calendar(url=url)
     ## At the other hand, this will cause network activity:
-    events = calendar.events()
+    events = await calendar.events()
     ## We should still have only one event in the calendar
     assert len(events) == 1
 
@@ -97,12 +99,12 @@ def calendar_by_url_demo(client, url):
 
     ## That was also done without any network traffic.  To get the same_event
     ## populated with data it needs to be loaded:
-    same_event.load()
+    await same_event.load()
 
     assert same_event.data == events[0].data
 
 
-def read_modify_event_demo(event):
+async def read_modify_event_demo(event):
     """This demonstrates how to edit properties in the ical object
     and save it back to the calendar.  It takes an event -
     caldav.Event - as input.  This event is found through the
@@ -172,24 +174,24 @@ def read_modify_event_demo(event):
 
     ## The mofifications are still only saved locally in memory -
     ## let's save it to the server:
-    event.save()
+    await event.save()
 
     ## NOTE: always use event.save() for updating events and
     ## calendar.save_event(data) for creating a new event.
     ## This may break:
-    # event.save(event.data)
+    # await event.save(event.data)
     ## ref https://github.com/python-caldav/caldav/issues/153
 
     ## Finally, let's verify that the correct data was saved
     calendar = event.parent
-    same_event = calendar.event_by_uid(uid)
+    same_event = await calendar.event_by_uid(uid)
     assert (
         same_event.icalendar_component["summary"]
         == "Norwegian national day celebrations"
     )
 
 
-def search_calendar_demo(calendar):
+async def search_calendar_demo(calendar):
     """
     some examples on how to fetch objects from the calendar
     """
@@ -198,7 +200,7 @@ def search_calendar_demo(calendar):
     ## supports it, hence either event, todo or journal should be set
     ## to True when searching.  Here is a date search for events, with
     ## expand:
-    events_fetched = calendar.search(
+    events_fetched = await calendar.search(
         start=datetime.now(),
         end=datetime(date.today().year + 5, 1, 1),
         event=True,
@@ -214,7 +216,7 @@ def search_calendar_demo(calendar):
 
     ## We can also do the same thing without expand, then the "master"
     ## from 2020 will be fetched
-    events_fetched = calendar.search(
+    events_fetched = await calendar.search(
         start=datetime.now(),
         end=datetime(date.today().year + 5, 1, 1),
         event=True,
@@ -223,33 +225,33 @@ def search_calendar_demo(calendar):
     assert len(events_fetched) == 1
 
     ## search can be done by other things, i.e. keyword
-    tasks_fetched = calendar.search(todo=True, category="outdoor")
+    tasks_fetched = await calendar.search(todo=True, category="outdoor")
     assert len(tasks_fetched) == 1
 
     ## This those should also work:
-    all_objects = calendar.objects()
-    # updated_objects = calendar.objects_by_sync_token(some_sync_token)
-    # some_object = calendar.object_by_uid(some_uid)
-    # some_event = calendar.event_by_uid(some_uid)
-    children = calendar.children()
-    events = calendar.events()
-    tasks = calendar.todos()
+    all_objects = await calendar.objects()
+    # updated_objects = await calendar.objects_by_sync_token(some_sync_token)
+    # some_object = await calendar.object_by_uid(some_uid)
+    # some_event = await calendar.event_by_uid(some_uid)
+    children = await calendar.children()
+    events = await calendar.events()
+    tasks = await calendar.todos()
     assert len(events) + len(tasks) == len(all_objects)
     assert len(children) == len(all_objects)
     ## TODO: Some of those should probably be deprecated.
     ## children is a good candidate.
 
     ## Tasks can be completed
-    tasks[0].complete()
+    await tasks[0].complete()
 
     ## They will then disappear from the task list
-    assert not calendar.todos()
+    assert not await calendar.todos()
 
     ## But they are not deleted
-    assert len(calendar.todos(include_completed=True)) == 1
+    assert len(await calendar.todos(include_completed=True)) == 1
 
     ## Let's delete it completely
-    tasks[0].delete()
+    await tasks[0].delete()
 
     return events_fetched[0]
 
@@ -269,7 +271,7 @@ def print_calendars_demo(calendars):
         print("your principal has no calendars")
 
 
-def find_delete_calendar_demo(my_principal, calendar_name):
+async def find_delete_calendar_demo(my_principal, calendar_name):
     """
     This example takes a calendar name, finds the calendar if it
     exists, and deletes the calendar if it exists.
@@ -277,18 +279,18 @@ def find_delete_calendar_demo(my_principal, calendar_name):
     ## Let's try to find or create a calendar ...
     try:
         ## This will raise a NotFoundError if calendar does not exist
-        demo_calendar = my_principal.calendar(name="Test calendar from caldav examples")
+        demo_calendar = await my_principal.calendar(name="Test calendar from caldav examples")
         assert demo_calendar
         print(
             f"We found an existing calendar with name {calendar_name}, now deleting it"
         )
-        demo_calendar.delete()
+        await demo_calendar.delete()
     except caldav.error.NotFoundError:
         ## Calendar was not found
         pass
 
 
-def add_stuff_to_calendar_demo(calendar):
+async def add_stuff_to_calendar_demo(calendar):
     """
     This demo adds some stuff to the calendar
 
@@ -296,7 +298,7 @@ def add_stuff_to_calendar_demo(calendar):
     https://github.com/python-caldav/caldav/issues/253
     """
     ## Add an event with some certain attributes
-    may_event = calendar.save_event(
+    may_event = await calendar.save_event(
         dtstart=datetime(2020, 5, 17, 6),
         dtend=datetime(2020, 5, 18, 1),
         summary="Do the needful",
@@ -305,14 +307,14 @@ def add_stuff_to_calendar_demo(calendar):
 
     ## not all calendars supports tasks ... but if it's supported, it should be
     ## told here:
-    acceptable_component_types = calendar.get_supported_components()
+    acceptable_component_types = await calendar.get_supported_components()
     assert "VTODO" in acceptable_component_types
 
     ## Add a task that should contain some ical lines
     ## Note that this may break on your server:
     ## * not all servers accepts tasks and events mixed on the same calendar.
     ## * not all servers accepts tasks at all
-    dec_task = calendar.save_todo(
+    dec_task = await calendar.save_todo(
         ical_fragment="""DTSTART;VALUE=DATE:20201213
 DUE;VALUE=DATE:20201220
 SUMMARY:Chop down a tree and drag it into the living room
@@ -345,4 +347,4 @@ def _please_ignore_this_hack():
 
 if __name__ == "__main__":
     _please_ignore_this_hack()
-    run_examples()
+    anyio.run(run_examples)

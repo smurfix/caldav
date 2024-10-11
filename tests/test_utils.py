@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from caldav.lib.python_utilities import to_wire
+from aiocaldav.lib.python_utilities import to_wire
 
 
 class TestUtils(TestCase):

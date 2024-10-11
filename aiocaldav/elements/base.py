@@ -8,8 +8,8 @@ from typing import Union
 from lxml import etree
 from lxml.etree import _Element
 
-from caldav.lib.namespace import nsmap
-from caldav.lib.python_utilities import to_unicode
+from aiocaldav.lib.namespace import nsmap
+from aiocaldav.lib.python_utilities import to_unicode
 
 if sys.version_info < (3, 9):
     from typing import Iterable
@@ -94,7 +94,7 @@ class NamedBaseElement(BaseElement):
 
     def xmlelement(self):
         if self.attributes.get("name") is None:
-            raise Exception("name attribute must be defined")
+            raise ValueError("name attribute must be defined")
         return super(NamedBaseElement, self).xmlelement()
 
 

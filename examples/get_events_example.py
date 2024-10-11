@@ -2,7 +2,9 @@
 import json
 from os import environ as env
 
-import caldav
+import anyio
+
+import aiocaldav as caldav
 
 username = env["CALDAV_USERNAME"]
 password = env["CALDAV_PASSWORD"]
@@ -11,7 +13,7 @@ caldav_url = f"https://{url}/{username}/"
 headers = {}
 
 
-def fetch_and_print():
+async def fetch_and_print():
     with caldav.DAVClient(
         url=caldav_url,
         username=username,
@@ -19,7 +21,7 @@ def fetch_and_print():
         # Optional parameter to set HTTP headers on each request if needed
         headers=headers,
     ) as client:
-        print_calendars_demo(client.principal().calendars())
+        print_calendars_demo((await client.principal()).calendars())
 
 
 def print_calendars_demo(calendars):
@@ -27,7 +29,7 @@ def print_calendars_demo(calendars):
         return
     events = []
     for calendar in calendars:
-        for event in calendar.events():
+        for event in await calendar.events():
             for component in event.icalendar_instance.walk():
                 if component.name != "VEVENT":
                     continue
@@ -49,4 +51,4 @@ def fill_event(component, calendar) -> dict[str, str]:
 
 
 if __name__ == "__main__":
-    fetch_and_print()
+    anyio.run(fetch_and_print)

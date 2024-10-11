@@ -3,7 +3,7 @@ from typing import ClassVar
 
 from .base import BaseElement
 from .base import ValuedBaseElement
-from caldav.lib.namespace import ns
+from aiocaldav.lib.namespace import ns
 
 
 # Operations

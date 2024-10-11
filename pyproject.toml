@@ -3,10 +3,10 @@ requires = ["setuptools>=64", "setuptools-scm[toml]>=7.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "caldav"
+name = "aiocaldav"
 authors = [{ name = "Cyril Robert", email = "cyril@hippie.io" }]
 license = { text = "GPL" }
-description = "CalDAV (RFC4791) client library"
+description = "Async CalDAV (RFC4791) client library"
 keywords = []
 readme = "README.md"
 classifiers = [
@@ -25,7 +25,7 @@ classifiers = [
     "Topic :: Office/Business :: Scheduling",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
-urls = { Homepage = "https://github.com/python-caldav/caldav" }
+urls = { Homepage = "https://github.com/moat/aiocaldav" }
 dependencies = [
     "anyio",
     "vobject",
@@ -41,6 +41,7 @@ dynamic = ["version"]
 [project.optional-dependencies]
 test = [
     "pytest",
+    "pytest_asyncio",
     "requests",
     "coverage",
     "sphinx",
@@ -52,10 +53,10 @@ test = [
 ]
 
 [tool.setuptools_scm]
-write_to = "caldav/_version.py"
+write_to = "aiocaldav/_version.py"
 
 [tool.setuptools]
-py-modules = ["caldav"]
+py-modules = ["aiocaldav"]
 include-package-data = true
 
 [tool.setuptools.packages.find]

@@ -18,30 +18,32 @@ import lxml.etree
 import pytest
 import vobject
 
-import caldav
-from caldav import Calendar
-from caldav import CalendarObjectResource
-from caldav import CalendarSet
-from caldav import DAVObject
-from caldav import Event
-from caldav import FreeBusy
-from caldav import Journal
-from caldav import Principal
-from caldav import Todo
-from caldav.davclient import DAVClient
-from caldav.davclient import DAVResponse
-from caldav.elements import cdav
-from caldav.elements import dav
-from caldav.elements import ical
-from caldav.lib import error
-from caldav.lib import url
-from caldav.lib.python_utilities import to_normal_str
-from caldav.lib.python_utilities import to_wire
-from caldav.lib.url import URL
+import aiocaldav as caldav
+from aiocaldav import Calendar
+from aiocaldav import CalendarObjectResource
+from aiocaldav import CalendarSet
+from aiocaldav import DAVObject
+from aiocaldav import Event
+from aiocaldav import FreeBusy
+from aiocaldav import Journal
+from aiocaldav import Principal
+from aiocaldav import Todo
+from aiocaldav.davclient import DAVClient
+from aiocaldav.davclient import DAVResponse
+from aiocaldav.elements import cdav
+from aiocaldav.elements import dav
+from aiocaldav.elements import ical
+from aiocaldav.lib import error
+from aiocaldav.lib import url
+from aiocaldav.lib.python_utilities import to_normal_str
+from aiocaldav.lib.python_utilities import to_wire
+from aiocaldav.lib.url import URL
+
+pytestmark = pytest.mark.anyio
 
 ## Note on the imports - those two lines are equivalent:
-# from caldav.objects import foo
-# from caldav import foo
+# from aiocaldav.objects import foo
+# from aiocaldav import foo
 ## This is due to a line like this in __init__.py:
 # from .objects import *
 ## Said line should be deprecated at some point
@@ -173,7 +175,7 @@ def MockedDAVClient(xml_returned):
     a request is performed
     """
     client = DAVClient(url="https://somwhere.in.the.universe.example/some/caldav/root")
-    client.request = mock.MagicMock(return_value=MockedDAVResponse(xml_returned))
+    client.request = mock.AsyncMock(return_value=MockedDAVResponse(xml_returned))
     return client
 
 
@@ -251,20 +253,24 @@ class TestCalDAV:
     dependencies, without accessing any caldav server)
     """
 
-    @mock.patch("caldav.davclient.httpx.AsyncClient.request")
+    @mock.patch("aiocaldav.davclient.httpx.AsyncClient.request")
     async def testRequestNonAscii(self, mocked):
         """
         ref https://github.com/python-caldav/caldav/issues/83
         """
-        mocked().status_code = 200
-        mocked().headers = {}
+        mocked.return_value = rval = mock.MagicMock()
+        rval.status_code = 200
+        rval.reason_phrase = "Fine"
+        rval.headers = {}
+        rval.content = ""
+
         cal_url = "http://me:hunter2@calendar.møøh.example:80/"
         client = DAVClient(url=cal_url)
-        response = client.put("/foo/møøh/bar", "bringebærsyltetøy 北京 пиво", {})
+        response = await client.put("/foo/møøh/bar", "bringebærsyltetøy 北京 пиво", {})
         assert response.status == 200
         assert response.tree is None
 
-        response = client.put(
+        response = await client.put(
             "/foo/møøh/bar".encode("utf-8"),
             "bringebærsyltetøy 北京 пиво".encode("utf-8"),
             {},
@@ -272,13 +278,15 @@ class TestCalDAV:
         assert response.status == 200
         assert response.tree is None
 
-    @mock.patch("caldav.davclient.httpx.AsyncClient.request")
+    @mock.patch("aiocaldav.davclient.httpx.AsyncClient.request")
     async def testRequestCustomHeaders(self, mocked):
         """
         ref https://github.com/python-caldav/caldav/issues/285
         """
-        mocked().status_code = 200
-        mocked().headers = {}
+        mocked.return_value = rval = mock.MagicMock()
+        rval.status_code = 200
+        rval.headers = {}
+
         cal_url = "http://me:hunter2@calendar.møøh.example:80/"
         client = DAVClient(
             url=cal_url,
@@ -289,29 +297,35 @@ class TestCalDAV:
         ## User-Agent would be overwritten by some boring default in earlier versions
         assert client.headers["User-Agent"] == "MyCaldavApp"
 
-    @mock.patch("caldav.davclient.httpx.AsyncClient.request")
+    @mock.patch("aiocaldav.davclient.httpx.AsyncClient.request")
     async def testEmptyXMLNoContentLength(self, mocked):
         """
         ref https://github.com/python-caldav/caldav/issues/213
         """
-        mocked().status_code = 200
-        mocked().headers = {"Content-Type": "text/xml"}
-        mocked().content = ""
-        client = DAVClient(url="AsdfasDF").request("/")
+        mocked.return_value = rval = mock.MagicMock()
+        rval.status_code = 200
+        rval.reason_phrase = "Fine"
+        rval.headers = {"Content-Type": "text/xml"}
+        rval.content = ""
 
-    @mock.patch("caldav.davclient.httpx.AsyncClient.request")
+        client = await DAVClient(url="AsdfasDF").request("/")
+
+    @mock.patch("aiocaldav.davclient.httpx.AsyncClient.request")
     async def testNonValidXMLNoContentLength(self, mocked):
         """
         If XML is expected but nonvalid XML is given, an error should be raised
         """
-        mocked().status_code = 200
-        mocked().headers = {"Content-Type": "text/xml"}
-        mocked().content = "this is not XML"
+        mocked.return_value = rval = mock.MagicMock()
+        rval.status_code = 200
+        rval.reason_phrase = "Fine"
+        rval.headers = {"Content-Type": "text/xml"}
+        rval.content = "this is not XML"
+
         client = DAVClient(url="AsdfasDF")
         with pytest.raises(lxml.etree.XMLSyntaxError):
-            client.request("/")
+            await client.request("/")
 
-    def testPathWithEscapedCharacters(self):
+    async def testPathWithEscapedCharacters(self):
         xml = b"""<D:multistatus xmlns:D="DAV:" xmlns:caldav="urn:ietf:params:xml:ns:caldav" xmlns:cs="http://calendarserver.org/ns/" xmlns:ical="http://apple.com/ns/ical/">
   <D:response xmlns:carddav="urn:ietf:params:xml:ns:carddav" xmlns:cm="http://cal.me.com/_namespace/" xmlns:md="urn:mobileme:davservices">
     <D:href>/some/caldav/root/133bahgr6ohlo9ungq0it45vf8%40group.calendar.google.com/events/</D:href>
@@ -326,15 +340,20 @@ class TestCalDAV:
   </D:response>
 </D:multistatus>"""
         client = MockedDAVClient(xml)
-        assert client.calendar(
+        assert await client.calendar(
             url="https://somwhere.in.the.universe.example/some/caldav/root/133bahgr6ohlo9ungq0it45vf8%40group.calendar.google.com/events/"
         ).get_supported_components() == ["VEVENT"]
 
-    def testAbsoluteURL(self):
+    async def testAbsoluteURL(self):
         """Version 0.7.0 does not handle responses with absolute URLs very well, ref https://github.com/python-caldav/caldav/pull/103"""
-        ## none of this should initiate any communication
+        ## this should not initiate any communication
         client = DAVClient(url="http://cal.example.com/")
-        principal = Principal(client=client, url="http://cal.example.com/home/bernard/")
+
+        ## this does, Principal retrieves the CalendarHomeSet property
+        mocked_property = mock.MagicMock()
+        Principal.get_property = mock.AsyncMock(return_value=URL("http://cal.example.com/home/bernard/calendars/"))
+        principal = await Principal(client=client, url="http://cal.example.com/home/bernard/")
+
         ## now, ask for the calendar_home_set, but first we need to mock up client.propfind
         mocked_response = mock.MagicMock()
         mocked_response.status_code = 207
@@ -357,17 +376,17 @@ class TestCalDAV:
 </d:multistatus>
 </xml>"""
         mocked_davresponse = DAVResponse(mocked_response)
-        client.propfind = mock.MagicMock(return_value=mocked_davresponse)
+        client.propfind = mock.AsyncMock(return_value=mocked_davresponse)
         bernards_calendars = principal.calendar_home_set
         assert bernards_calendars.url == URL(
             "http://cal.example.com/home/bernard/calendars/"
         )
 
-    def _load(self, only_if_unloaded=True):
+    async def _load(self, only_if_unloaded=True):
         self.data = todo6
 
-    @mock.patch("caldav.objects.CalendarObjectResource.load", new=_load)
-    def testDateSearch(self):
+    @mock.patch("aiocaldav.objects.CalendarObjectResource.load", new=_load)
+    async def testDateSearch(self):
         """
         ## ref https://github.com/python-caldav/caldav/issues/133
         """
@@ -420,12 +439,12 @@ class TestCalDAV:
         calendar = Calendar(
             client, url="/principals/calendar/home@petroski.example.com/963/"
         )
-        results = calendar.date_search(
+        results = await calendar.date_search(
             datetime(2021, 2, 1), datetime(2021, 2, 7), expand=False
         )
         assert len(results) == 3
 
-    def testCalendar(self):
+    async def testCalendar(self):
         """
         Principal.calendar() and CalendarSet.calendar() should create
         Calendar objects without initiating any communication with the
@@ -438,21 +457,22 @@ class TestCalDAV:
         cal_url = "http://me:hunter2@calendar.example:80/"
         client = DAVClient(url=cal_url)
 
-        principal = Principal(client, cal_url + "me/")
-        principal.calendar_home_set = cal_url + "me/calendars/"
+        Principal.get_property = mock.AsyncMock(return_value=None)
+        principal = await Principal(client, cal_url + "me/")
+        await principal.calendar_home_setter(cal_url + "me/calendars/")
         # calendar_home_set is actually a CalendarSet object
         assert isinstance(principal.calendar_home_set, CalendarSet)
-        calendar1 = principal.calendar(name="foo", cal_id="bar")
-        calendar2 = principal.calendar_home_set.calendar(name="foo", cal_id="bar")
-        calendar3 = principal.calendar(cal_id="bar")
+        calendar1 = await principal.calendar(name="foo", cal_id="bar")
+        calendar2 = await principal.calendar_home_set.calendar(name="foo", cal_id="bar")
+        calendar3 = await principal.calendar(cal_id="bar")
         assert calendar1.url == calendar2.url
         assert calendar1.url == calendar3.url
         assert calendar1.url == "http://calendar.example:80/me/calendars/bar/"
 
         # principal.calendar_home_set can also be set to an object
         # This should be noop
-        principal.calendar_home_set = principal.calendar_home_set
-        calendar1 = principal.calendar(name="foo", cal_id="bar")
+        await principal.calendar_home_setter(principal.calendar_home_set)
+        calendar1 = await principal.calendar(name="foo", cal_id="bar")
         assert calendar1.url == calendar2.url
 
         # When building a calendar from a relative URL and a client,
@@ -464,7 +484,7 @@ class TestCalDAV:
         )
         assert calendar1.url == calendar2.url
 
-    def test_get_events_icloud(self):
+    async def test_get_events_icloud(self):
         """
         tests that some XML observed from the icloud returns 0 events found.
         """
@@ -490,9 +510,9 @@ class TestCalDAV:
             client,
             url="/17149682/calendars/testcalendar-485d002e-31b9-4147-a334-1d71503a4e2c/",
         )
-        assert len(calendar.events()) == 0
+        assert len(await calendar.events()) == 0
 
-    def test_get_calendars(self):
+    async def test_get_calendars(self):
         xml = """
 <D:multistatus xmlns:D="DAV:">
   <D:response>
@@ -560,9 +580,9 @@ class TestCalDAV:
 """
         client = MockedDAVClient(xml)
         calendar_home_set = CalendarSet(client, url="/dav/tobias%40redpill-linpro.com/")
-        assert len(calendar_home_set.calendars()) == 1
+        assert len(await calendar_home_set.calendars()) == 1
 
-        def test_supported_components(self):
+        async def test_supported_components(self):
             xml = """
 <multistatus xmlns="DAV:">
   <response xmlns="DAV:">
@@ -578,7 +598,7 @@ class TestCalDAV:
   </response>
 </multistatus>"""
             client = MockedDAVClient(xml)
-            assert Calendar(
+            assert await Calendar(
                 client=client,
                 url="/17149682/calendars/testcalendar-0da571c7-139c-479a-9407-8ce9ed20146d/",
             ).get_supported_components() == ["VEVENT"]
@@ -978,7 +998,7 @@ END:VCALENDAR
         davclient.huge_tree = True
         DAVResponse(resp, davclient=davclient)
 
-    def testFailedQuery(self):
+    async def testFailedQuery(self):
         """
         ref https://github.com/python-caldav/caldav/issues/54
         """
@@ -996,11 +1016,13 @@ END:VCALENDAR
         failedresp.raw = "your request does not adhere to standards"
 
         ## synthesize a new http method
-        calhome.client.unknown_method = lambda url, body, depth: failedresp
+        async def _fail(url, body, depth):
+            return failedresp
+        calhome.client.unknown_method = _fail
 
         ## call it.
         with pytest.raises(error.DAVError):
-            calhome._query(query_method="unknown_method")
+            await calhome._query(query_method="unknown_method")
 
     def testDefaultClient(self):
         """When no client is given to a DAVObject, but the parent is given,
@@ -1079,7 +1101,7 @@ END:VCALENDAR
             == "Submit Quebec Income Tax Return for 2006"
         )
 
-    def testTodoDuration(self):
+    async def testTodoDuration(self):
         cal_url = "http://me:hunter2@calendar.example:80/"
         client = DAVClient(url=cal_url)
         my_todo1 = Todo(client, data=todo)
@@ -1093,11 +1115,11 @@ END:VCALENDAR
         foo6 = my_todo3.get_due().strftime("%s") == "1177945200"
         some_date = date(2011, 1, 1)
 
-        my_todo1.set_due(some_date)
+        await my_todo1.set_due(some_date)
         assert my_todo1.get_due() == some_date
 
         ## set_due has "only" one if, so two code paths, one where dtstart is actually moved and one where it isn't
-        my_todo2.set_due(some_date, move_dtstart=True)
+        await my_todo2.set_due(some_date, move_dtstart=True)
         assert my_todo2.icalendar_instance.subcomponents[0][
             "DTSTART"
         ].dt == some_date - timedelta(days=6)
@@ -1271,20 +1293,20 @@ END:VCALENDAR
                     == class_
                 )
 
-    def testContextManager(self):
+    async def testContextManager(self):
         """
         ref https://github.com/python-caldav/caldav/pull/175
-        """
+        async """
         cal_url = "http://me:hunter2@calendar.example:80/"
-        with DAVClient(url=cal_url) as client_ctx_mgr:
+        async with DAVClient(url=cal_url) as client_ctx_mgr:
             assert isinstance(client_ctx_mgr, DAVClient)
 
-    def testExtractAuth(self):
+    async def testExtractAuth(self):
         """
         ref https://github.com/python-caldav/caldav/issues/289
         """
         cal_url = "http://me:hunter2@calendar.example:80/"
-        with DAVClient(url=cal_url) as client:
+        async with DAVClient(url=cal_url) as client:
             assert client.extract_auth_types("Basic\n") == {"basic"}
             assert client.extract_auth_types("Basic") == {"basic"}
             assert client.extract_auth_types('Basic Realm=foo;charset="UTF-8"') == {

@@ -1,5 +1,7 @@
-from httpx import Auth
+from __future__ import annotations
 
+from httpx import Auth, Request, Response
+import typing
 
 class BearerAuth(Auth):
     """

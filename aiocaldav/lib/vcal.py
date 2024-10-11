@@ -6,7 +6,7 @@ import uuid
 
 import icalendar
 
-from caldav.lib.python_utilities import to_normal_str
+from aiocaldav.lib.python_utilities import to_normal_str
 
 ## Global counter.  We don't want to be too verbose on the users, ref https://github.com/home-assistant/core/issues/86938
 fixup_error_loggings = 0
