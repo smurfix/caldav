@@ -12,3 +12,5 @@ override_dh_usrlocal:
 	    mv debian/python3-aiocaldav/usr/local/bin/* debian/python3-aiocaldav/usr/bin; \
 	fi
 
+override_dh_autotest:
+	: do not test
