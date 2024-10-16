@@ -18,7 +18,7 @@ Depends: ${misc:Depends}, ${python3:Depends},
   python3-icalendar,
   python3-urllib3,
   python3-recurring-ical-events (>= 2.0.0),
-  python3-typing_extensions,
+  python3-typing-extensions,
 Description: Async CalDAV (RFC4791) client library
   # caldav
   .
