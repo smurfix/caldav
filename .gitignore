@@ -28,3 +28,6 @@ tests/conf_private.py
 .eggs
 .venv
 aiocaldav/_version.py
+
+# Debian packaging
+/debian/
