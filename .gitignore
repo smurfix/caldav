@@ -27,4 +27,5 @@ tests/conf_private.py
 .tox
 .eggs
 .venv
-aiocaldav/_version.py
+/.pybuild
+/aiocaldav/_version.py

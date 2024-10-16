@@ -1,3 +1,9 @@
+aiocaldav (1.3.90-2) unstable; urgency=medium
+
+  * Merge: ignored files
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 16 Oct 2024 18:13:49 +0200
+
 aiocaldav (1.3.90-1) unstable; urgency=medium
 
   * Initial Debianization of async branch.
