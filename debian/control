@@ -1,0 +1,34 @@
+Source: aiocaldav
+Maintainer: "Matthias Urlichs" <matthias@urlichs.de>
+Section: python
+Priority: optional
+Build-Depends: dh-python, python3-setuptools, python3-all, debhelper (>= 13),
+  python3-setuptools (>= 64),
+  python3-setuptools-scm (>= 7.0),
+Standards-Version: 3.9.6
+Homepage: 
+
+Package: python3-aiocaldav
+Architecture: all
+Depends: ${misc:Depends}, ${python3:Depends},
+  python3-anyio,
+  python3-vobject,
+  python3-lxml,
+  python3-httpx,
+  python3-icalendar,
+  python3-urllib3,
+  python3-recurring-ical-events (>= 2.0.0),
+  python3-typing_extensions,
+Description: Async CalDAV (RFC4791) client library
+  # caldav
+  .
+  This project is a CalDAV ([RFC4791](http://www.ietf.org/rfc/rfc4791.txt)) client library for Python.
+  .
+  Features:
+  .
+   * create, modify calendar
+   * create, update and delete event
+   * search events by dates
+   * etc.
+  .
+

@@ -1,0 +1,5 @@
+aiocaldav (v1.3.9-1) unstable; urgency=medium
+
+  * Initial Debianization.
+
+ -- Matthias Urlichs <matthias@urlichs.de>  Wed, 16 Oct 2024 18:04:37 +0200
