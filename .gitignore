@@ -27,7 +27,6 @@ tests/conf_private.py
 .tox
 .eggs
 .venv
-aiocaldav/_version.py
-
-# Debian packaging
 /debian/
+/.pybuild
+/aiocaldav/_version.py
